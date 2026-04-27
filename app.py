@@ -1,43 +1,65 @@
 import streamlit as st
 import pickle
 import re
-import nltk
-from nltk.corpus import stopwords
+import spacy
 
-nltk.download('stopwords')
+# Page config (must be first Streamlit command)
+st.set_page_config(page_title="Airline Sentiment Analysis")
 
-st.set_page_config(page_title="Sentiment Analysis")
+# Cache spaCy model (VERY IMPORTANT for deployment)
+@st.cache_resource
+def load_spacy_model():
+    return spacy.load("en_core_web_sm", disable=["parser", "ner"])
 
-# load files
-model = pickle.load(open("model.pkl", "rb"))
-vectorizer = pickle.load(open("vectorizer.pkl", "rb"))
-le = pickle.load(open("label_encoder.pkl", "rb"))
+nlp = load_spacy_model()
 
+# Load ML components
+@st.cache_resource
+def load_models():
+    model = pickle.load(open("model.pkl", "rb"))
+    vectorizer = pickle.load(open("vectorizer.pkl", "rb"))
+    le = pickle.load(open("label_encoder.pkl", "rb"))
+    return model, vectorizer, le
+
+model, vectorizer, le = load_models()
+
+# Text cleaning function (same as your training logic)
 def clean_text(text):
     text = re.sub(r"http\S+", "", text)
     text = text.lower()
     text = re.sub(r"[^a-z\s]", "", text)
     text = re.sub(r"\s+", " ", text)
 
-    stop_words = set(stopwords.words('english'))
-    words = text.split()
-    words = [word for word in words if word not in stop_words]
+    doc = nlp(text)
 
-    return " ".join(words)
+    tokens = [
+        token.lemma_
+        for token in doc
+        if not token.is_stop
+    ]
 
+    return " ".join(tokens)
+
+# UI
 st.title("✈ Airline Tweet Sentiment Analysis")
 
 tweet = st.text_area("Enter Tweet")
 
 if st.button("Predict"):
-    cleaned = clean_text(tweet)
-    vec = vectorizer.transform([cleaned])
-    pred = model.predict(vec)
-    label = le.inverse_transform(pred)[0]
-
-    if label == "positive":
-        st.success("Positive 😊")
-    elif label == "negative":
-        st.error("Negative 😡")
+    if tweet.strip() == "":
+        st.warning("Please enter some text")
     else:
-        st.info("Neutral 😐")
+        cleaned = clean_text(tweet)
+
+        vec = vectorizer.transform([cleaned])
+        pred = model.predict(vec)
+        label = le.inverse_transform(pred)[0]
+
+        st.write("**Processed Text:**", cleaned)
+
+        if label == "positive":
+            st.success("Positive 😊")
+        elif label == "negative":
+            st.error("Negative 😡")
+        else:
+            st.info("Neutral 😐")
