@@ -1,17 +1,19 @@
 import streamlit as st
 import pickle
 import re
-import spacy
+import nltk
+from nltk.corpus import stopwords
 
-# Page config (must be first Streamlit command)
+# Page config (must be first)
 st.set_page_config(page_title="Airline Sentiment Analysis")
 
-# Cache spaCy model (VERY IMPORTANT for deployment)
+# Download stopwords (cached so it runs once)
 @st.cache_resource
-def load_spacy_model():
-    return spacy.load("en_core_web_sm", disable=["parser", "ner"])
+def load_stopwords():
+    nltk.download('stopwords')
+    return set(stopwords.words('english'))
 
-nlp = load_spacy_model()
+stop_words = load_stopwords()
 
 # Load ML components
 @st.cache_resource
@@ -23,22 +25,17 @@ def load_models():
 
 model, vectorizer, le = load_models()
 
-# Text cleaning function (same as your training logic)
+# Text cleaning (matches NLTK-based training)
 def clean_text(text):
     text = re.sub(r"http\S+", "", text)
     text = text.lower()
     text = re.sub(r"[^a-z\s]", "", text)
     text = re.sub(r"\s+", " ", text)
 
-    doc = nlp(text)
+    words = text.split()
+    words = [word for word in words if word not in stop_words]
 
-    tokens = [
-        token.lemma_
-        for token in doc
-        if not token.is_stop
-    ]
-
-    return " ".join(tokens)
+    return " ".join(words)
 
 # UI
 st.title("✈ Airline Tweet Sentiment Analysis")
@@ -55,7 +52,7 @@ if st.button("Predict"):
         pred = model.predict(vec)
         label = le.inverse_transform(pred)[0]
 
-        st.write("**Processed Text:**", cleaned)
+        st.write("Processed Text:", cleaned)
 
         if label == "positive":
             st.success("Positive 😊")
