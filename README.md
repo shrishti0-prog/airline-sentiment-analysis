@@ -21,3 +21,4 @@ Airline Tweets dataset containing positive, negative and neutral tweets.
 - Evaluated using weighted F1-score
 
 ## Run the Streamlit App
+https://airline-sentiment-analysis-alvednymkox23znoefnv8t.streamlit.app/
