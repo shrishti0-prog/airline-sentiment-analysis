@@ -4,10 +4,16 @@ import re
 import nltk
 from nltk.corpus import stopwords
 
-# Page config (must be first)
-st.set_page_config(page_title="Airline Sentiment Analysis")
+# ---------------- PAGE CONFIG ---------------- #
 
-# Download stopwords (cached so it runs once)
+st.set_page_config(
+    page_title="Airline Sentiment Analysis",
+    page_icon="✈",
+    layout="centered"
+)
+
+# ---------------- LOAD STOPWORDS ---------------- #
+
 @st.cache_resource
 def load_stopwords():
     nltk.download('stopwords')
@@ -15,7 +21,8 @@ def load_stopwords():
 
 stop_words = load_stopwords()
 
-# Load ML components
+# ---------------- LOAD MODEL ---------------- #
+
 @st.cache_resource
 def load_models():
     model = pickle.load(open("model.pkl", "rb"))
@@ -25,38 +32,130 @@ def load_models():
 
 model, vectorizer, le = load_models()
 
-# Text cleaning (matches NLTK-based training)
+# ---------------- TEXT CLEANING ---------------- #
+
 def clean_text(text):
+
     text = re.sub(r"http\S+", "", text)
+
     text = text.lower()
+
     text = re.sub(r"[^a-z\s]", "", text)
+
     text = re.sub(r"\s+", " ", text)
 
     words = text.split()
+
     words = [word for word in words if word not in stop_words]
 
     return " ".join(words)
 
-# UI
+# ---------------- SIDEBAR ---------------- #
+
+st.sidebar.title("📌 About Project")
+
+st.sidebar.info(
+    """
+    This application predicts airline tweet sentiment using:
+
+    ✅ Natural Language Processing (NLP)
+
+    ✅ TF-IDF Vectorization
+
+    ✅ Machine Learning
+
+    Sentiments:
+    • Positive 😊
+    • Negative 😠
+    • Neutral 😐
+    """
+)
+
+# ---------------- MAIN TITLE ---------------- #
+
 st.title("✈ Airline Tweet Sentiment Analysis")
 
-tweet = st.text_area("Enter Tweet")
+st.markdown(
+    """
+    Analyze airline-related tweets and classify their sentiment using Machine Learning and NLP.
+    """
+)
 
-if st.button("Predict"):
+# ---------------- ACCURACY ---------------- #
+
+st.success("✅ Model Accuracy: 89%")
+
+# ---------------- EXAMPLE TWEETS ---------------- #
+
+st.markdown("### 💡 Example Tweets")
+
+st.code(
+    """
+The flight was amazing
+Worst airline ever
+The service was okay
+Flight delayed badly
+Staff behavior was excellent
+"""
+)
+
+# ---------------- TEXT AREA ---------------- #
+
+tweet = st.text_area(
+    "📝 Enter Tweet",
+    height=150,
+    placeholder="Type your airline tweet here..."
+)
+
+# ---------------- PREDICTION ---------------- #
+
+if st.button("🔍 Predict Sentiment"):
+
     if tweet.strip() == "":
-        st.warning("Please enter some text")
+
+        st.warning("⚠ Please enter some text")
+
     else:
-        cleaned = clean_text(tweet)
 
-        vec = vectorizer.transform([cleaned])
-        pred = model.predict(vec)
-        label = le.inverse_transform(pred)[0]
+        with st.spinner("Analyzing sentiment..."):
 
-        st.write("Processed Text:", cleaned)
+            # preprocessing
+            cleaned = clean_text(tweet)
+
+            # vectorization
+            vec = vectorizer.transform([cleaned])
+
+            # prediction
+            pred = model.predict(vec)
+
+            label = le.inverse_transform(pred)[0]
+
+        # processed text
+        st.markdown("### 🧹 Processed Text")
+
+        st.info(cleaned)
+
+        # prediction output
+        st.markdown("### 📊 Sentiment Prediction")
 
         if label == "positive":
-            st.success("Positive 😊")
+
+            st.success("😊 Positive Sentiment")
+
+            st.balloons()
+
         elif label == "negative":
-            st.error("Negative 😡")
+
+            st.error("😠 Negative Sentiment")
+
         else:
-            st.info("Neutral 😐")
+
+            st.warning("😐 Neutral Sentiment")
+
+# ---------------- FOOTER ---------------- #
+
+st.markdown("---")
+
+st.caption(
+    "Developed using Python, NLP, TF-IDF, Machine Learning, and Streamlit"
+)
